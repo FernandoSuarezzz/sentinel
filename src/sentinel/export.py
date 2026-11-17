@@ -38,9 +38,9 @@ def _torch_export(kind: str, module, args, path: Path) -> None:
     """Export with one of PyTorch's two ONNX exporters.
 
     "dynamo" (torch.export, the default since PyTorch 2.9) captures the real graph, including
-    code paths that depend on the input length. "legacy" (TorchScript tracing) records one
-    example run and can freeze length-dependent Python decisions as constants: on a Kaggle
-    run that made ONNX drift from PyTorch by up to 0.76 in the logits.
+    code paths that depend on the input length; it needs the `onnxscript` package.
+    "legacy" (TorchScript tracing) records one example run. Whichever is used, the export is
+    only kept if its output matches PyTorch (checked in `main`).
     """
     import torch
 
@@ -98,7 +98,10 @@ def main() -> None:
         def forward(self, input_ids, attention_mask):
             return self.m(input_ids=input_ids, attention_mask=attention_mask).logits
 
-    # Reference: PyTorch logits on real validation texts, padded into one batch.
+    # Reference: PyTorch logits on real validation texts, padded into one batch. Computed
+    # *before* exporting and with explicit inputs: in an earlier run the reference was taken
+    # after tracing and with every tokenizer field, and the check reported a 0.76 gap that
+    # disappeared once the reference was computed this way.
     data_path = Path(cfg["data_path"])
     samples = (pd.read_parquet(data_path).query("split == 'val'")["text"]
                .sample(64, random_state=0).tolist() if data_path.exists() else FALLBACK_SAMPLES)
