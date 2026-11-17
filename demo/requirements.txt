@@ -1,0 +1,3 @@
+sentinel @ git+https://github.com/FernandoSuarezzz/sentinel.git
+gradio>=4.40
+huggingface_hub>=0.23

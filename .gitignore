@@ -1,7 +1,9 @@
 __pycache__/
-*.pyc
-.pytest_cache/
+*.egg-info/
 .venv/
-models/
-*.joblib
-.DS_Store
+.pytest_cache/
+.ruff_cache/
+artifacts/
+mlruns/
+mlflow.db
+!tests/fixtures/tiny_model/*.onnx

@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [],
+  "normalizer": null,
+  "pre_tokenizer": {"type": "Whitespace"},
+  "post_processor": null,
+  "decoder": null,
+  "model": {
+    "type": "WordLevel",
+    "vocab": {"<s>": 0, "<pad>": 1, "</s>": 2, "[UNK]": 3, "ATTACK": 7, "the": 10,
+              "food": 11, "was": 12, "great": 13, "ignore": 14, "all": 15},
+    "unk_token": "[UNK]"
+  }
+}

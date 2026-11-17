@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install serving + dev dependencies (no PyTorch needed)
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Tests
+        run: pytest -q
+
+  docker:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t sentinel:ci .
+      - name: Serve the tiny test model and call the API
+        run: |
+          docker run -d --name sentinel -p 8000:8000 \
+            -v "$PWD/tests/fixtures/tiny_model:/model:ro" sentinel:ci
+          for i in $(seq 1 30); do curl -sf localhost:8000/healthz && break; sleep 1; done
+          curl -sf localhost:8000/readyz
+          verdict=$(curl -sf localhost:8000/v1/scan -H 'content-type: application/json' \
+            -d '{"text": "the food was great ATTACK"}' | python -c "import sys,json;print(json.load(sys.stdin)['verdict'])")
+          test "$verdict" = "injection"
+          docker logs sentinel

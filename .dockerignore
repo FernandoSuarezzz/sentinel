@@ -1,6 +1,9 @@
-.venv/
-.git/
-models/
-__pycache__/
-*.pyc
-.pytest_cache/
+.git
+.github
+artifacts
+notebooks
+tests
+demo
+mlruns
+**/__pycache__
+*.onnx

@@ -1,0 +1,11 @@
+{
+  "cls_id": 0,
+  "sep_id": 2,
+  "pad_id": 1,
+  "max_length": 16,
+  "stride": 4,
+  "threshold": 0.5,
+  "max_chunks": 8,
+  "onnx_file": "model.onnx",
+  "version": "tiny"
+}

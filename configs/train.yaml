@@ -1,0 +1,24 @@
+# Every number that shapes the model lives here, so a run is reproducible from this file.
+
+# Small multilingual encoder (118M params, 384-dim, 12 layers): handles Spanish and English,
+# and is fast enough to sit in the request path of an LLM application.
+model_name: intfloat/multilingual-e5-small
+max_length: 256          # tokens per window (training truncates, serving slides windows)
+
+epochs: 3
+learning_rate: 3.0e-5
+batch_size: 32
+warmup_ratio: 0.1        # ramp the learning rate up during the first 10% of steps
+weight_decay: 0.01
+seed: 42
+
+# Operating point: the firewall may wrongly block at most 1% of legitimate texts.
+target_fpr: 0.01
+
+# Existing open-source detector we benchmark against (English-only, DeBERTa-v3-base).
+baseline_model: protectai/deberta-v3-base-prompt-injection-v2
+
+data_path: artifacts/data/dataset.parquet
+model_dir: artifacts/model
+onnx_dir: artifacts/onnx
+report_dir: artifacts/report
