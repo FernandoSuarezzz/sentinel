@@ -44,6 +44,8 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Notebooks use Jupyter-only names (`_exit_code`, `!` commands); lint the package instead.
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
