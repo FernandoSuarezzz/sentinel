@@ -30,7 +30,8 @@ malicious ones.
 
 Trained on a free Kaggle GPU (2× T4) on 12,573 texts, validated on 1,397. Each model gets its
 decision threshold from the validation set with the same rule (block at most **1% of legitimate
-texts**), except the external detector, which keeps its own default.
+texts**), except the external detector, which keeps its own default. Numbers below are from the
+second training run; the first gave recall 0.985 and FPR 0.022 on the same test set.
 
 | Model | What it is |
 |---|---|
@@ -42,7 +43,7 @@ texts**), except the external detector, which keeps its own default.
 
 | | Precision | Recall | F1 | False positive rate | ROC-AUC |
 |---|---|---|---|---|---|
-| **Sentinel v2** | 0.966 | **0.985** | **0.976** | 0.022 | 0.997 |
+| **Sentinel v2** | 0.973 | **0.989** | **0.980** | 0.018 | **0.998** |
 | Sentinel v1 | 0.987 | 0.955 | 0.971 | 0.008 | 0.997 |
 | ProtectAI DeBERTa | 0.930 | 0.840 | 0.883 | 0.041 | 0.972 |
 
@@ -50,36 +51,38 @@ Where the difference shows (recall = share of attacks caught):
 
 | Slice | Rows | v2 recall | v1 recall | v2 FPR | v1 FPR |
 |---|---|---|---|---|---|
-| Human-written attacks (`deepset`) | 114 | **0.828** | 0.690 | 0.054 | 0.036 |
-| Spanish texts | 650 | **0.989** | 0.902 | 0.000 | 0.000 |
-| Synthetic indirect attacks | 1,119 | **0.993** | 0.935 | 0.011 | 0.000 |
+| Human-written attacks (`deepset`) | 114 | **0.810** | 0.690 | **0.000** | 0.036 |
+| Spanish texts | 650 | **0.992** | 0.902 | 0.000 | 0.000 |
+| Synthetic indirect attacks | 1,119 | **0.995** | 0.935 | 0.009 | 0.000 |
 
 ### Speed and size (CPU, one request)
 
 | | p50 | p95 |
 |---|---|---|
-| **ONNX int8** (what is served) | **15.3 ms** | 16.7 ms |
-| ONNX fp32 | 17.6 ms | 19.6 ms |
-| PyTorch fp32 | 43.0 ms | 47.1 ms |
-| ONNX int8, long text (7 windows) | 458 ms | 485 ms |
+| **ONNX int8** (what is served) | **14.2 ms** | 15.0 ms |
+| ONNX fp32 | 17.1 ms | 18.8 ms |
+| PyTorch fp32 | 40.6 ms | 44.0 ms |
+| ONNX int8, long text (7 windows) | 460 ms | 482 ms |
+
+The int8 file is 112.7 MB (fp32: 449 MB). The export checks passed: ONNX fp32 matches PyTorch
+within 1.2e-5 in the logits, and int8 gives the same verdict as PyTorch on all 64 check samples.
 
 ### What I take from this
 
-- **v2 catches more attacks where it matters**: +14 points on human-written attacks, +9 on
-  Spanish, +6 on attacks hidden inside reviews. It beats the open-source DeBERTa detector on
-  every metric.
+- **v2 catches more attacks where it matters**: +12 points on human-written attacks (with no
+  false alarms on that slice, where v1 had 3.6%), +9 on Spanish, +6 on attacks hidden inside
+  reviews. It beats the open-source DeBERTa detector on every metric.
 - **The price is false positives.** The threshold was set for 1% on validation, but test came
-  out at 2.2% for v2 (v1: 0.8%). Validation was too similar to training to calibrate the
+  out at 1.8% for v2 (v1: 0.8%). Validation was too similar to training to calibrate the
   threshold for new sources. Next step: calibrate on a validation set drawn from sources the
   model never trained on.
 - **My out-of-distribution test was too easy.** On held-out attack families (fake system
-  messages, obfuscated text) v2 reached 0.964 recall at 1.1% FPR, but the simple v1 baseline
+  messages, obfuscated text) v2 reached 0.970 recall at 0.4% FPR, but the simple v1 baseline
   scored a perfect 1.000, so that set does not measure generalisation: template-generated text
   is easy to separate. The most honest generalisation number here is the human-written
   `deepset` slice. Next step: a held-out set of real, human-written attacks.
-- **Serving**: int8 ONNX runs a typical text in 15 ms on CPU, about 2.8× faster than PyTorch,
-  and the file is 4× smaller (112.7 MB vs 449 MB in fp32).
-  Long texts cost one model pass per 256-token window.
+- **Serving**: int8 ONNX runs a typical text in 14 ms on CPU, about 2.9× faster than PyTorch,
+  and the file is 4× smaller. Long texts cost one model pass per 256-token window.
 
 ### Version 1 (November 2026)
 
