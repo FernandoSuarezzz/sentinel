@@ -28,22 +28,57 @@ malicious ones.
 
 ## Results
 
-_Version 2 results: run the [Colab notebook](notebooks/train_colab.ipynb) and paste
-`artifacts/report/report.md` here._
-
-Two held-out test sets, never used for training or tuning:
-
-- **test**: same attack styles as training, but unseen texts and unseen payload wordings
-- **ood_test**: attack *families* the model never saw (fake system messages, obfuscated text)
-
-Each model gets its decision threshold from the validation set, with the same rule: block at
-most **1% of legitimate texts**. Three models are compared on the same data:
+Trained on a free Kaggle GPU (2× T4) on 12,573 texts, validated on 1,397. Each model gets its
+decision threshold from the validation set with the same rule (block at most **1% of legitimate
+texts**), except the external detector, which keeps its own default.
 
 | Model | What it is |
 |---|---|
 | **Sentinel v2** | Fine-tuned multilingual transformer, served as int8 ONNX |
 | **Sentinel v1** | My first version: TF-IDF + logistic regression, retrained on the same data |
-| **ProtectAI DeBERTa** | An existing open-source detector, English-only, at its default threshold |
+| **ProtectAI DeBERTa** | An existing open-source detector, English-only, at its default threshold of 0.5 |
+
+### Held-out test set (3,542 texts: unseen texts and unseen attack wordings)
+
+| | Precision | Recall | F1 | False positive rate | ROC-AUC |
+|---|---|---|---|---|---|
+| **Sentinel v2** | 0.966 | **0.985** | **0.976** | 0.022 | 0.997 |
+| Sentinel v1 | 0.987 | 0.955 | 0.971 | 0.008 | 0.997 |
+| ProtectAI DeBERTa | 0.930 | 0.840 | 0.883 | 0.041 | 0.972 |
+
+Where the difference shows (recall = share of attacks caught):
+
+| Slice | Rows | v2 recall | v1 recall | v2 FPR | v1 FPR |
+|---|---|---|---|---|---|
+| Human-written attacks (`deepset`) | 114 | **0.828** | 0.690 | 0.054 | 0.036 |
+| Spanish texts | 650 | **0.989** | 0.902 | 0.000 | 0.000 |
+| Synthetic indirect attacks | 1,119 | **0.993** | 0.935 | 0.011 | 0.000 |
+
+### Speed (CPU, one request)
+
+| | p50 | p95 |
+|---|---|---|
+| **ONNX int8** (what is served) | **15.3 ms** | 16.7 ms |
+| ONNX fp32 | 17.6 ms | 19.6 ms |
+| PyTorch fp32 | 43.0 ms | 47.1 ms |
+| ONNX int8, long text (7 windows) | 458 ms | 485 ms |
+
+### What I take from this
+
+- **v2 catches more attacks where it matters**: +14 points on human-written attacks, +9 on
+  Spanish, +6 on attacks hidden inside reviews. It beats the open-source DeBERTa detector on
+  every metric.
+- **The price is false positives.** The threshold was set for 1% on validation, but test came
+  out at 2.2% for v2 (v1: 0.8%). Validation was too similar to training to calibrate the
+  threshold for new sources. Next step: calibrate on a validation set drawn from sources the
+  model never trained on.
+- **My out-of-distribution test was too easy.** On held-out attack families (fake system
+  messages, obfuscated text) v2 reached 0.964 recall at 1.1% FPR, but the simple v1 baseline
+  scored a perfect 1.000, so that set does not measure generalisation: template-generated text
+  is easy to separate. The most honest generalisation number here is the human-written
+  `deepset` slice. Next step: a held-out set of real, human-written attacks.
+- **Serving**: int8 ONNX runs a typical text in 15 ms on CPU, about 2.8× faster than PyTorch.
+  Long texts cost one model pass per 256-token window.
 
 ### Version 1 (November 2026)
 
@@ -114,8 +149,10 @@ a non-root user.
 
 ## Train it yourself
 
-Open the [notebook in Colab](https://colab.research.google.com/github/FernandoSuarezzz/sentinel/blob/main/notebooks/train_colab.ipynb),
-select a T4 GPU and run all cells (~40 minutes). Or locally:
+Run [`notebooks/train_colab.ipynb`](notebooks/train_colab.ipynb) on a free GPU (~40 minutes):
+in [Colab](https://colab.research.google.com/github/FernandoSuarezzz/sentinel/blob/main/notebooks/train_colab.ipynb)
+select a T4 GPU, or on Kaggle import it from GitHub and choose GPU T4 x2 with Internet on.
+The reported results come from a Kaggle run. Or locally:
 
 ```bash
 pip install -e ".[train,dev]"
@@ -147,8 +184,8 @@ tests/          unit + API tests against a tiny real ONNX model
 
 - A classifier is **one layer** of defence, not a complete one. It should be combined with
   least-privilege tool access and human confirmation for sensitive actions.
-- The synthetic data comes from templates. The OOD test set measures how far the model
-  generalises beyond them, and obfuscated attacks are the expected weak spot.
+- The synthetic data comes from templates, and the held-out families turned out easy to
+  separate (see Results). Human-written attacks are the real test, and the main gap.
 - English and Spanish only. Other languages may work through the multilingual encoder, but
   are not evaluated.
 - Like any ML model, it can be attacked adversarially by someone with access to its scores.
