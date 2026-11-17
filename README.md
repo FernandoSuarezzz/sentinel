@@ -54,7 +54,7 @@ Where the difference shows (recall = share of attacks caught):
 | Spanish texts | 650 | **0.989** | 0.902 | 0.000 | 0.000 |
 | Synthetic indirect attacks | 1,119 | **0.993** | 0.935 | 0.011 | 0.000 |
 
-### Speed (CPU, one request)
+### Speed and size (CPU, one request)
 
 | | p50 | p95 |
 |---|---|---|
@@ -77,7 +77,8 @@ Where the difference shows (recall = share of attacks caught):
   scored a perfect 1.000, so that set does not measure generalisation: template-generated text
   is easy to separate. The most honest generalisation number here is the human-written
   `deepset` slice. Next step: a held-out set of real, human-written attacks.
-- **Serving**: int8 ONNX runs a typical text in 15 ms on CPU, about 2.8× faster than PyTorch.
+- **Serving**: int8 ONNX runs a typical text in 15 ms on CPU, about 2.8× faster than PyTorch,
+  and the file is 4× smaller (112.7 MB vs 449 MB in fp32).
   Long texts cost one model pass per 256-token window.
 
 ### Version 1 (November 2026)
