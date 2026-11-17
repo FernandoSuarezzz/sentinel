@@ -9,6 +9,7 @@ any number in the README can be traced back to the exact run that produced it.
 from __future__ import annotations
 
 import argparse
+import math
 import os
 from pathlib import Path
 
@@ -72,13 +73,19 @@ def main() -> None:
     model = AutoModelForSequenceClassification.from_pretrained(
         cfg["model_name"], num_labels=2, id2label=ID2LABEL, label2id=LABEL2ID)
 
+    # Warmup as a whole number of steps: works with every transformers version
+    # (v5 removed `warmup_ratio`; an integer `warmup_steps` is accepted everywhere).
+    devices = max(1, torch.cuda.device_count())  # the Trainer splits each batch over all GPUs
+    steps_per_epoch = math.ceil(len(train_ds) / (cfg["batch_size"] * devices))
+    warmup_steps = math.ceil(cfg["warmup_ratio"] * steps_per_epoch * cfg["epochs"])
+
     training_args = TrainingArguments(
         output_dir=str(Path(cfg["model_dir"]) / "checkpoints"),
         num_train_epochs=cfg["epochs"],
         learning_rate=cfg["learning_rate"],
         per_device_train_batch_size=cfg["batch_size"],
         per_device_eval_batch_size=cfg["batch_size"] * 2,
-        warmup_ratio=cfg["warmup_ratio"],
+        warmup_steps=warmup_steps,
         weight_decay=cfg["weight_decay"],
         eval_strategy="epoch",
         save_strategy="epoch",

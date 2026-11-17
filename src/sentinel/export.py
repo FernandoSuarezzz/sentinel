@@ -78,7 +78,9 @@ def main() -> None:
     model_dir, out = Path(cfg["model_dir"]), Path(cfg["onnx_dir"])
     out.mkdir(parents=True, exist_ok=True)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(model_dir).eval()
+    # Plain ("eager") attention exports cleanly to ONNX in every transformers version.
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_dir, attn_implementation="eager").eval()
 
     class LogitsOnly(torch.nn.Module):
         """ONNX needs a plain tensor output, not a Hugging Face output object."""
