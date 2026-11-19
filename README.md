@@ -5,8 +5,6 @@
 [![ci](https://github.com/FernandoSuarezzz/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/FernandoSuarezzz/sentinel/actions/workflows/ci.yml)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/FernandoSuarezzz/sentinel/blob/main/notebooks/train_colab.ipynb)
 
-**Live demo:** _add your Hugging Face Space link here_
-
 ---
 
 ## The problem
@@ -109,7 +107,7 @@ flowchart LR
     D --> E[Export ONNX<br/>+ int8 quantization<br/>3 automatic checks]
     E --> F[Calibrate threshold<br/>FPR ≤ 1%]
     F --> G[FastAPI service<br/>Docker · Prometheus]
-    F --> H[Gradio demo<br/>Hugging Face Spaces]
+    F -.-> H[Gradio demo<br/>code ready, not deployed yet]
 ```
 
 | Decision | Why |
@@ -180,7 +178,7 @@ src/sentinel/
   evaluate.py   threshold calibration, metrics, comparisons, latency
   detector.py   production inference: ONNX Runtime + sliding windows
   api.py        FastAPI service with Prometheus metrics
-demo/           Gradio app for Hugging Face Spaces
+demo/           Gradio app for Hugging Face Spaces (not deployed yet)
 tests/          unit + API tests against a tiny real ONNX model
 ```
 
